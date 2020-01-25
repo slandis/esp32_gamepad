@@ -9,8 +9,6 @@
 
 /* Packet starts at offset+1 */
 void parse_packet(uint16_t len, uint16_t offset, uint8_t *packet) {
-  printf("(%ul) ", len);
-
   for (uint16_t i = offset+1; i < len + offset; i++) {
     printf("%d ", packet[i]);
   }

@@ -11,12 +11,10 @@
 
 #include "include/gap.h"
 
-uint16_t gap_handle_hidc = GAP_INVALID_HANDLE;
-uint16_t gap_handle_hidi = GAP_INVALID_HANDLE;
-
 uint8_t gamepad_btaddr[BD_ADDR_LEN] = {0x28, 0x9A, 0x4B, 0x0A, 0x1D, 0x9A};
 
 void mainTask(void *pvParameters) {
+  /*
   while (GAP_INVALID_HANDLE == gap_handle_hidc || GAP_INVALID_HANDLE == gap_handle_hidi) {
     ESP_LOGI("ESP32BT", "Attempting to connect to bluetooth device");
     gap_handle_hidc = gap_init_service( "HIDC", BT_PSM_HIDC, BTM_SEC_SERVICE_FIRST_EMPTY   );
@@ -24,6 +22,7 @@ void mainTask(void *pvParameters) {
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
+  */
 
   while (1) {
     vTaskDelay(100 / portTICK_PERIOD_MS);

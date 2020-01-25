@@ -17,8 +17,59 @@
 #include "include/gap.h"
 #include "include/parse.h"
 
+bool targetFound = false;
+
+uint16_t gap_handle_hidc = GAP_INVALID_HANDLE;
+uint16_t gap_handle_hidi = GAP_INVALID_HANDLE;
+
+static tL2CAP_ERTM_INFO ertm_info = {0};
+static tL2CAP_CFG_INFO cfg_info = {0};
+
+static uint16_t gap_init_service(char *, uint16_t psm, uint8_t);
+static void gap_event_handle(uint16_t handle, uint16_t event);
+
+static bool is_target_addr(uint8_t *addr) {
+  for (int i = 0; i < BD_ADDR_LEN; i++) {
+    if (addr[i] != gamepad_btaddr[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static void gap_callback(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param) {
+  switch (event) {
+    case ESP_BT_GAP_DISC_RES_EVT: {
+      if (is_target_addr(param->disc_res.bda) && !targetFound) {
+        targetFound = true;
+        ESP_LOGI("ESP32BT", "Attempting to connect");
+        gap_handle_hidc = gap_init_service( "HIDC", BT_PSM_HIDC, BTM_SEC_SERVICE_FIRST_EMPTY   );
+        gap_handle_hidi = gap_init_service( "HIDI", BT_PSM_HIDI, BTM_SEC_SERVICE_FIRST_EMPTY+1 );
+      }
+
+      break;
+    }
+
+    default:
+      break;
+  }
+}
+
 static void gap_event_handle(uint16_t handle, uint16_t event) {
   switch (event) {
+    case GAP_EVT_CONN_OPENED: {
+      ESP_LOGI("ESP32BT", "GAP Connection Opened: %d", handle);
+      esp_bt_gap_cancel_discovery();
+      break;
+    }
+
+    case GAP_EVT_CONN_CLOSED: {
+      targetFound = false;
+      esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, 0x30, 0x0);
+      break;
+    }
+
     case GAP_EVT_CONN_DATA_AVAIL: {
       BT_HDR *p_buf;
 
@@ -59,12 +110,19 @@ bool gap_init_hardware() {
     return false;
   }
 
+  esp_bt_gap_register_callback(gap_callback);
+
+  if (esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, 0x30, 0x0) != ESP_OK) {
+    ESP_LOGE("ESP32BT", "Unable to start discovery service");
+    return false;
+  }
+
   return true;
 }
 
-uint16_t gap_init_service(char *name, uint16_t psm, uint8_t security_id) {
-    uint16_t handle = GAP_ConnOpen (name, security_id, /*is_server=*/false, /*p_rem_bda=*/gamepad_btaddr,
-                     psm, &cfg_info, &ertm_info, /*security=*/0, /*chan_mode_mask=*/1,
+static uint16_t gap_init_service(char *name, uint16_t psm, uint8_t security_id) {
+    uint16_t handle = GAP_ConnOpen(name, security_id, /*is_server=*/false, /*p_rem_bda=*/gamepad_btaddr,
+                     psm, &cfg_info, &ertm_info, /*security=*/0, /*chan_mode_mask=*/0,
                      gap_event_handle);
 
     if (handle == GAP_INVALID_HANDLE){

@@ -1,1 +1,1 @@
-static void parse_packet(uint16_t, uint16_t, uint8_t *);
+void parse_packet(uint16_t len, uint16_t offset, uint8_t *packet);
